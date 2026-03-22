@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("USER") // ADMIN, USER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cnpj {
+  id                String   @id @default(uuid())
+  razaoSocial       String
+  nomeFantasia      String
+  cnpj              String   @unique
+  inscricaoEstadual String?
+  telefone          String?
+  email             String?
+  endereco          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Licitacao {
+  id                 String               @id @default(uuid())
+  numeroProcesso     String               @unique
+  orgaoId            String 
+  orgaoNome          String?
+  modalidade         String
+  dataAbertura       DateTime
+  valorTotalEstimado Float
+  prazoEntregaDias   Int?                 // SLA para controle de limite de entrega
+  status             String               @default("EM_ANDAMENTO") // EM_ANDAMENTO, CONCLUIDA, CANCELADA
+  itens              ItemLicitacao[]
+  ordens             OrdemFornecimento[]
+  ata                Ata?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+}
+
+model Ata {
+  id             String    @id @default(uuid())
+  licitacaoId    String    @unique
+  licitacao      Licitacao @relation(fields: [licitacaoId], references: [id], onDelete: Cascade)
+  pdfUrl         String
+  dataAssinatura DateTime? // Início da Vigência
+  dataVigencia   DateTime? // Fim da Vigência do SRP / Contrato
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+
+model ItemLicitacao {
+  id            String    @id @default(uuid())
+  licitacaoId   String
+  licitacao     Licitacao @relation(fields: [licitacaoId], references: [id], onDelete: Cascade)
+  descricao     String
+  quantidade    Int
+  valorUnitario Float
+  ganhou        Boolean   @default(false)
+  itensOrdem    ItemOrdemFornecimento[] // Link para deduzir o Saldo da Ata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model OrdemFornecimento {
+  id            String                  @id @default(uuid())
+  licitacaoId   String
+  licitacao     Licitacao               @relation(fields: [licitacaoId], references: [id])
+  numeroOF      String                  @unique
+  dataEmissao   DateTime
+  valorTotal    Float
+  numeroNF      String?                 // Controle de Faturamento
+  dataAteste    DateTime?               // Ateste do Órgão confirmando o recebimento
+  status        String                  @default("PENDENTE") // PENDENTE, EM_PROCESSAMENTO, ENTREGUE, CANCELADA
+  itensOF       ItemOrdemFornecimento[] 
+  pedidos       Pedido[]
+  ordensCompra  OrdemCompra[]
+  contasReceber ContasReceber[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+}
+
+model ItemOrdemFornecimento {
+  id                   String            @id @default(uuid())
+  ordemId              String
+  ordem                OrdemFornecimento @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  itemLicitacaoId      String
+  itemLicitacao        ItemLicitacao     @relation(fields: [itemLicitacaoId], references: [id], onDelete: Restrict)
+  quantidadePedida     Int
+  valorUnitarioCobrado Float
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+}
+
+model OrdemCompra {
+  id                   String            @id @default(uuid())
+  ordemFornecimentoId  String?
+  ordemFornecimento    OrdemFornecimento? @relation(fields: [ordemFornecimentoId], references: [id])
+  fornecedor           String
+  valorTotalCompra     Float
+  status               String            @default("SOLICITADA") // SOLICITADA, PAGA, ENTREGUE
+  contasPagar          ContasPagar[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+}
+
+model Pedido {
+  id                String            @id @default(uuid())
+  ordemId           String
+  ordem             OrdemFornecimento @relation(fields: [ordemId], references: [id])
+  dataEnvio         DateTime?
+  dataLimiteEntrega DateTime?         // Check SLA
+  codigoRastreio    String?
+  transportadora    String?
+  status            String            @default("PREPARANDO") // PREPARANDO, ENVIADO, ENTREGUE
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model ContasReceber {
+  id             String            @id @default(uuid())
+  ordemId        String?
+  ordem          OrdemFornecimento? @relation(fields: [ordemId], references: [id], onDelete: SetNull)
+  valor          Float
+  dataVencimento DateTime
+  pago           Boolean           @default(false)
+  dataPagamento  DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model ContasPagar {
+  id             String        @id @default(uuid())
+  descricao      String
+  fornecedor     String
+  valor          Float
+  dataVencimento DateTime
+  pago           Boolean       @default(false)
+  dataPagamento  DateTime?
+  ordemCompraId  String?
+  ordemCompra    OrdemCompra?  @relation(fields: [ordemCompraId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
