@@ -2,7 +2,7 @@
 
 import AdminLayout from "@/components/AdminLayout";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Package, Pencil, Trash2 } from "lucide-react";
 
 interface Ordem {
@@ -31,7 +31,7 @@ const fmtDate = (d: string) => new Date(d).toLocaleDateString("pt-BR");
 
 const empty = { licitacaoId: "", numeroOF: "", dataEmissao: "", valorTotal: "", numeroNF: "", dataAteste: "", status: "PENDENTE" };
 
-export default function OrdensPage() {
+function OrdensContent() {
     const [items, setItems] = useState<Ordem[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -232,5 +232,13 @@ export default function OrdensPage() {
                 </div>
             )}
         </AdminLayout>
+    );
+}
+
+export default function OrdensPage() {
+    return (
+        <Suspense fallback={<div className="p-4 text-center">Carregando...</div>}>
+            <OrdensContent />
+        </Suspense>
     );
 }
