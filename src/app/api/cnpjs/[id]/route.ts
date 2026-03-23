@@ -7,7 +7,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         const cnpj = await prisma.cnpj.findUnique({ where: { id } });
         if (!cnpj) return NextResponse.json({ error: "CNPJ não encontrado" }, { status: 404 });
         return NextResponse.json(cnpj);
-    } catch {
+    } catch (err) {
+        console.error("GET CNPJ Error:", err);
         return NextResponse.json({ error: "Erro ao buscar CNPJ" }, { status: 500 });
     }
 }
@@ -29,7 +30,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             },
         });
         return NextResponse.json(cnpj);
-    } catch {
+    } catch (err) {
+        console.error("PUT CNPJ Error:", err);
         return NextResponse.json({ error: "Erro ao atualizar CNPJ" }, { status: 500 });
     }
 }
@@ -39,7 +41,8 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
         const { id } = await params;
         await prisma.cnpj.delete({ where: { id } });
         return NextResponse.json({ message: "CNPJ removido com sucesso" });
-    } catch {
+    } catch (err) {
+        console.error("DELETE CNPJ Error:", err);
         return NextResponse.json({ error: "Erro ao deletar CNPJ" }, { status: 500 });
     }
 }
